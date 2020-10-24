@@ -1,0 +1,12 @@
+image: debian
+packages:
+  - golang
+sources:
+  - https://git.sr.ht/~retzkek/pfeil
+tasks:
+  - build: |
+      cd pfeil
+      go build
+  - test: |
+      cd pfeil
+      ./example.sh
