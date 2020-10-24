@@ -18,8 +18,8 @@ import (
 var (
 	version = "0.1.0"
 	verbose = flag.Bool("v", false, "enable verbose/debug logging (default false)")
-	sample  = flag.Bool("y", false, "always send span (sets SAMPLER_TYPE=const, SAMPLER_PARAM=1)")
-	noop    = flag.Bool("n", false, "don't send span (overrides -y, sets SAMPLER_PARAM=0)")
+	sample  = flag.Bool("y", false, "always sample new trace (sets SAMPLER_TYPE=const, SAMPLER_PARAM=1)")
+	noop    = flag.Bool("n", false, "never sample new trace (overrides -y, sets SAMPLER_PARAM=0)")
 	service = flag.String("svc", "", "service name for trace, overrides JAEGER_SERVICE_NAME")
 	op      = flag.String("op", "verfolgen", "operation name for span")
 )
@@ -40,7 +40,7 @@ Arguments will be parsed into key=value pairs and added as tags.
 Use the following environment variables to configure Jaeger: (common settings,
 see https://github.com/jaegertracing/jaeger-client-go for the full list).
 
-  JAEGER_SERVICE_NAME      The service name.
+  JAEGER_SERVICE_NAME      The service name (overriden by -svc).
   AEGER_AGENT_HOST         The hostname for communicating with agent via UDP
                            (default localhost).
   JAEGER_AGENT_PORT        The port for communicating with agent via UDP
