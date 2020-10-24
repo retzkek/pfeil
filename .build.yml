@@ -1,6 +1,6 @@
 image: debian/sid
 packages:
-  - golang-1.15
+  - golang
 sources:
   - https://git.sr.ht/~retzkek/pfeil
 tasks:
