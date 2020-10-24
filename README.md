@@ -1,3 +1,5 @@
+[![build status](https://builds.sr.ht/~retzkek/pfeil.svg)](https://builds.sr.ht/~retzkek/pfeil/?)
+
 # Pfeil
 
 Pfeil is a simple tool to report an [opentracing](http://opentracing.io) span to

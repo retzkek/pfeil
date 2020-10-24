@@ -6,7 +6,12 @@ sources:
 tasks:
   - build: |
       cd pfeil
-      go build
+      make
   - test: |
       cd pfeil
       ./example.sh
+  - package: |
+      cd pfeil
+      make tarball
+artifacts:
+  - pfeil/pfeil.tar.gz
