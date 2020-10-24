@@ -127,8 +127,11 @@ func main() {
 	}
 
 	span := tracer.StartSpan(*op, opts...)
-	vl.Printf("started span %s", span)
 	defer span.Finish()
+	vl.Printf("started span %s", span)
+	if !span.Context().(jaeger.SpanContext).IsSampled() {
+		vl.Printf("warning, trace not sampled")
+	}
 
 	// parse tags from arguments
 	for _, arg := range flag.Args() {
