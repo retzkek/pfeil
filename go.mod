@@ -1,4 +1,4 @@
-module git.sr.ht/~retzkek/pfiel
+module git.sr.ht/~retzkek/pfeil
 
 go 1.14
 

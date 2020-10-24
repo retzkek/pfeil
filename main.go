@@ -26,19 +26,20 @@ var (
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), `Pfiel version %s
+		fmt.Fprintf(flag.CommandLine.Output(), `Pfeil version %s
 Usage: %s [opts] [tag1=val1] [tag2=val2] ...:
 
-Pfiel is a tool to send an OpenTracing span to a Jaeger agent or collector.
+Pfeil is a tool to send an OpenTracing span to a Jaeger agent or collector.
 Use the following environment variables to control the span:
 
   TRACE_ID       uber-trace-id, extracted from parent process
   TRACE_START    timestamp in Unix date format to record for start of span
 
-Arguments will be parsed into key=value pairs and added as tags.
+Arguments will be parsed into key=value pairs and added as tags. The new trace
+ID will be printed to stdout so it can be used as the parent for child spans.
 
-Use the following environment variables to configure Jaeger: (common settings,
-see https://github.com/jaegertracing/jaeger-client-go for the full list).
+Use the following environment variables to configure Jaeger (common settings,
+see https://github.com/jaegertracing/jaeger-client-go for the full list):
 
   JAEGER_SERVICE_NAME      The service name (overriden by -svc).
   AEGER_AGENT_HOST         The hostname for communicating with agent via UDP
@@ -58,7 +59,7 @@ see https://github.com/jaegertracing/jaeger-client-go for the full list).
                            (default http://127.0.0.1:5778/sampling).
 
 Options:
-`, version, os.Args[0])
+`, version, os.Args[0], os.Args[0])
 		flag.PrintDefaults()
 	}
 }
@@ -66,8 +67,8 @@ Options:
 func main() {
 	flag.Parse()
 
-	l := log.New(os.Stderr, "pfiel: ", log.LstdFlags|log.Lmsgprefix)
-	vl := log.New(os.Stderr, "pfiel: ", log.LstdFlags|log.Lmsgprefix)
+	l := log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
+	vl := log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
 	if !*verbose {
 		vl.SetOutput(ioutil.Discard)
 	}
@@ -143,5 +144,7 @@ func main() {
 			l.Printf("unable to parse tag argument %s, skipping", arg)
 		}
 	}
-	vl.Printf("done")
+
+	// print trace id to stdout so it can be used for next span if desired
+	fmt.Printf(span.Context().(jaeger.SpanContext).String())
 }

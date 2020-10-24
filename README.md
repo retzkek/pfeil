@@ -1,6 +1,6 @@
-# Pfiel
+# Pfeil
 
-Pfiel is a simple tool to report an [opentracing](http://opentracing.io) span to
+Pfeil is a simple tool to report an [opentracing](http://opentracing.io) span to
 a [jaeger](https://www.jaegertracing.io) server from the command line, useful
 for tracing shell scripts or external processes that can't be directly
 instrumented. 
@@ -19,7 +19,7 @@ is defined in Unix `date` format.
   `JAEGER_SAMPLER_PARAM=1`, default: `false`)
 * `-n` don't actually send the span to jaeger (overrides `-y`, sets
   `JAEGER_SAMPLER_PARAM=0`, default: `false`)
-* `-service string` service name (default: `pfiel`)
+* `-service string` service name (default: `pfeil`)
 * `-op string` operation name (default: `verfolgen`) 
 
 ## Environment
@@ -37,14 +37,14 @@ export TRACE_ID="7d7e22c6f96e391:b3185835b0e579c7:0:1" # we extracted this from 
 
 export TRACE_START=`date`
 command_1
-pfiel -y -op command_1
+pfeil -y -op command_1
 export TRACE_START=`date`
 command_2
-pfiel -v -y -op command_2 foo=bar
-2020/10/22 16:13:19 pfiel: found TRACE_ID 7d7e22c6f96e391:b3185835b0e579c7:0:1
-2020/10/22 16:13:19 pfiel: found TRACE_START Thu Oct 22 16:06:24 EDT 2020
-2020/10/22 16:13:19 pfiel: started span 07d7e22c6f96e391:7f6e9f9bd9baf554:b3185835b0e579c7:1
-2020/10/22 16:13:19 pfiel: done
+pfeil -v -y -op command_2 foo=bar
+2020/10/22 16:13:19 pfeil: found TRACE_ID 7d7e22c6f96e391:b3185835b0e579c7:0:1
+2020/10/22 16:13:19 pfeil: found TRACE_START Thu Oct 22 16:06:24 EDT 2020
+2020/10/22 16:13:19 pfeil: started span 07d7e22c6f96e391:7f6e9f9bd9baf554:b3185835b0e579c7:1
+2020/10/22 16:13:19 pfeil: done
 ```
 
 ## Extracting a trace id
