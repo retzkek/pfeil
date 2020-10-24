@@ -22,8 +22,8 @@ export JAEGER_SERVICE_NAME=$(basename "$0")
 unset TRACE_ID TRACE_START # clear any exisitng tracer state
 export TRACE_ID=$(./pfeil -v -op init -y args="$*") && export TRACE_START=$(date)
 step 1
-./pfeil -v -op step1 $(add_tags $?) && export TRACE_START=$(date)
+./pfeil -v -op step1 $(add_tags $?)>/dev/null && export TRACE_START=$(date)
 step 2
-./pfeil -v -op step2 $(add_tags $?) && export TRACE_START=$(date)
+./pfeil -v -op step2 $(add_tags $?)>/dev/null && export TRACE_START=$(date)
 step 3 1
-./pfeil -v -op step3 $(add_tags $?)
+./pfeil -v -op step3 $(add_tags $?)>/dev/null
