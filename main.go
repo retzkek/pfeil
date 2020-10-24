@@ -42,7 +42,7 @@ Use the following environment variables to configure Jaeger (common settings,
 see https://github.com/jaegertracing/jaeger-client-go for the full list):
 
   JAEGER_SERVICE_NAME      The service name (overriden by -svc).
-  AEGER_AGENT_HOST         The hostname for communicating with agent via UDP
+  JAEGER_AGENT_HOST        The hostname for communicating with agent via UDP
                            (default localhost).
   JAEGER_AGENT_PORT        The port for communicating with agent via UDP
                            (default 6831).
