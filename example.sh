@@ -12,18 +12,18 @@ step() {
 
 add_tags() {
    if [ "$1" != "0" ]; then
-       echo "exit_code=$1 error=true"
+       echo "exit_code=$1,error=true"
    else
-       echo "exit_code=$1 error=false"
+       echo "exit_code=$1,error=false"
    fi
 }
 
 export JAEGER_SERVICE_NAME=$(basename "$0")
 unset TRACE_ID TRACE_START # clear any exisitng tracer state
-export TRACE_ID=$(./pfeil -v -op init -y args="$*") && export TRACE_START=$(date)
+export TRACE_ID=$(./pfeil -v -y -t args="$*" init) && export TRACE_START=$(date)
 step 1
-./pfeil -v -op step1 $(add_tags $?)>/dev/null && export TRACE_START=$(date)
+./pfeil -v -t "$(add_tags $?)" step1 >/dev/null && export TRACE_START=$(date)
 step 2
-./pfeil -v -op step2 $(add_tags $?)>/dev/null && export TRACE_START=$(date)
+./pfeil -v -t "$(add_tags $?)" step2 >/dev/null && export TRACE_START=$(date)
 step 3 1
-./pfeil -v -op step3 $(add_tags $?)>/dev/null
+./pfeil -v -t "$(add_tags $?)" step3 >/dev/null

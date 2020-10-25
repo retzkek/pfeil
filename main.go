@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,31 +10,38 @@ import (
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	flag "github.com/spf13/pflag"
 	jaeger "github.com/uber/jaeger-client-go"
 	jaegercfg "github.com/uber/jaeger-client-go/config"
 )
 
 var (
-	version = "0.1.0"
-	verbose = flag.Bool("v", false, "enable verbose/debug logging (default false)")
-	sample  = flag.Bool("y", false, "always sample new trace (sets SAMPLER_TYPE=const, SAMPLER_PARAM=1)")
-	noop    = flag.Bool("n", false, "never sample new trace (overrides -y, sets SAMPLER_PARAM=0)")
-	service = flag.String("svc", "", "service name for trace, overrides JAEGER_SERVICE_NAME")
-	op      = flag.String("op", "verfolgen", "operation name for span")
+	version = "0.2.0"
+	verbose = flag.BoolP("verbose", "v", false, "enable verbose/debug logging (default false)")
+	sample  = flag.BoolP("sample", "y", false, "always sample new trace (sets SAMPLER_TYPE=const, SAMPLER_PARAM=1)")
+	noop    = flag.BoolP("nosample", "n", false, "never sample new trace (overrides -y, sets SAMPLER_PARAM=0)")
+	service = flag.StringP("service", "s", "", "service name for trace, overrides JAEGER_SERVICE_NAME")
+	tags    = flag.StringSliceP("tag", "t", []string{}, `tags to include in span, as "key=value".
+Multiple tags can be specified comma-separated, i.e. "k1=v1,k2=v2",
+or the option can be repeated, i.e. "-t k1=v1 -t k2=v2".`)
 )
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), `Pfeil version %s
-Usage: %s [opts] [tag1=val1] [tag2=val2] ...:
+		fmt.Fprintf(os.Stderr, `Pfeil version %s
+Usage: %s [OPTS] OPERATION
 
 Pfeil is a tool to send an OpenTracing span to a Jaeger agent or collector.
-Use the following environment variables to control the span:
 
-  TRACE_ID       uber-trace-id, extracted from parent process
+A service name must be set via --service/-s option or JAEGER_SERVICE_NAME.
+The span operation name must be provided as the OPERATION argument. Use the
+following environment variables to control the span:
+
+  TRACE_ID       uber-trace-id, extracted from parent process or Pfeil run,
+                 e.g. "13df7cb5f11aa574:13df7cb5f11aa574:0000000000000000:1"
   TRACE_START    timestamp in Unix date format to record for start of span
 
-Arguments will be parsed into key=value pairs and added as tags. The new trace
+Tags can be provided as key=value pairs with the --tag/-t option. The new trace
 ID will be printed to stdout so it can be used as the parent for child spans.
 
 Use the following environment variables to configure Jaeger (common settings,
@@ -59,7 +65,7 @@ see https://github.com/jaegertracing/jaeger-client-go for the full list):
                            (default http://127.0.0.1:5778/sampling).
 
 Options:
-`, version, os.Args[0], os.Args[0])
+`, version, os.Args[0])
 		flag.PrintDefaults()
 	}
 }
@@ -71,6 +77,10 @@ func main() {
 	vl := log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
 	if !*verbose {
 		vl.SetOutput(ioutil.Discard)
+	}
+
+	if flag.NArg() == 0 {
+		l.Fatalf("error: operation name argument must be set")
 	}
 
 	// load jaeger config from environment
@@ -127,21 +137,21 @@ func main() {
 		vl.Print("no TRACE_START found in env, using now")
 	}
 
-	span := tracer.StartSpan(*op, opts...)
+	span := tracer.StartSpan(flag.Arg(0), opts...)
 	defer span.Finish()
 	vl.Printf("started span %s", span)
 	if !span.Context().(jaeger.SpanContext).IsSampled() {
 		vl.Printf("warning, trace not sampled")
 	}
 
-	// parse tags from arguments
-	for _, arg := range flag.Args() {
-		kv := strings.SplitN(arg, "=", 2)
+	// parse tags from options
+	for _, tag := range *tags {
+		kv := strings.SplitN(tag, "=", 2)
 		if len(kv) == 2 {
-			vl.Printf("setting tag %s to %s", kv[0], kv[1])
+			vl.Printf("setting tag %s to \"%s\"", kv[0], kv[1])
 			span.SetTag(kv[0], kv[1])
 		} else {
-			l.Printf("unable to parse tag argument %s, skipping", arg)
+			l.Printf("unable to parse tag \"%s\", skipping", tag)
 		}
 	}
 
