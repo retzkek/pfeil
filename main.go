@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -16,7 +19,7 @@ import (
 )
 
 var (
-	version = "0.2.0"
+	version = "0.3.0"
 	verbose = flag.BoolP("verbose", "v", false, "enable verbose/debug logging (default false)")
 	sample  = flag.BoolP("sample", "y", false, "always sample new trace (sets SAMPLER_TYPE=const, SAMPLER_PARAM=1)")
 	noop    = flag.BoolP("nosample", "n", false, "never sample new trace (overrides -y, sets SAMPLER_PARAM=0)")
@@ -29,7 +32,7 @@ or the option can be repeated, i.e. "-t k1=v1 -t k2=v2".`)
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `Pfeil version %s
-Usage: %s [OPTS] OPERATION
+Usage: %s [OPTS] OPERATION [CMD [ARGS...]]
 
 Pfeil is a tool to send an OpenTracing span to a Jaeger agent or collector.
 
@@ -43,6 +46,10 @@ following environment variables to control the span:
 
 Tags can be provided as key=value pairs with the --tag/-t option. The new trace
 ID will be printed to stdout so it can be used as the parent for child spans.
+
+If the optional CMD and ARGS arguments are provided, CMD will be run with ARGS
+in a subprocess, with stdin, stout, and stderr piped through. The exit code will
+be added as tag exit_code, if it's nonzero then "error=true" will also be set.
 
 Use the following environment variables to configure Jaeger (common settings,
 see https://github.com/jaegertracing/jaeger-client-go for the full list):
@@ -70,11 +77,14 @@ Options:
 	}
 }
 
+var (
+	l  = log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
+	vl = log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
+)
+
 func main() {
 	flag.Parse()
 
-	l := log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
-	vl := log.New(os.Stderr, "pfeil: ", log.LstdFlags|log.Lmsgprefix)
 	if !*verbose {
 		vl.SetOutput(ioutil.Discard)
 	}
@@ -144,6 +154,19 @@ func main() {
 		vl.Printf("warning, trace not sampled")
 	}
 
+	// execute command if provided
+	if flag.NArg() > 1 {
+		// we could include the span in the context, but we need to modify it,
+		// so we need to pass the span object itself instead
+		ctx := context.Background()
+		if err = runCommand(ctx, span, flag.Arg(1), flag.Args()[2:]...); err != nil {
+			span.SetTag("error", true)
+			err = fmt.Errorf("error running command: %s", err)
+			span.SetTag("message", err.Error())
+			l.Fatalf("error running command: %s", err)
+		}
+	}
+
 	// parse tags from options
 	for _, tag := range *tags {
 		kv := strings.SplitN(tag, "=", 2)
@@ -157,4 +180,44 @@ func main() {
 
 	// print trace id to stdout so it can be used for next span if desired
 	fmt.Printf(span.Context().(jaeger.SpanContext).String())
+}
+
+func runCommand(ctx context.Context, span opentracing.Span, name string, arg ...string) error {
+	span.SetTag("cmd.cmd", name)
+	span.SetTag("cmd.args", strings.Join(arg, " "))
+	cmd := exec.CommandContext(ctx, name, arg...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	go io.Copy(os.Stdout, stdout)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	go io.Copy(os.Stderr, stderr)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	go func() {
+		// we need to manually close stdin, otherwise some commands may wait forever
+		defer stdin.Close()
+		io.Copy(stdin, os.Stdin)
+	}()
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+	if err = cmd.Wait(); err != nil {
+		switch e := err.(type) {
+		case *exec.ExitError:
+			span.SetTag("error", true)
+			span.SetTag("exit_code", e.ExitCode())
+		default:
+			return err
+		}
+	} else {
+		span.SetTag("exit_code", 0)
+	}
+	return nil
 }
