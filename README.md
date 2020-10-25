@@ -105,7 +105,9 @@ Output:
 ```
 
 See [example.sh](./example.sh) for a complete example shell script, including
-child spans and capturing exit codes and error tags.
+child spans and capturing exit codes and error tags. Example trace:
+
+![example trace screenshot](example.png)
 
 ## Extracting a trace id
 
