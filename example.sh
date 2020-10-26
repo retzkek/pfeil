@@ -30,9 +30,10 @@ step 2
 ./pfeil -v -t "$(add_tags $?)" step2 >/dev/null && export TRACE_START=$(date)
 echo ">>> maybe too much work, this will fail!"
 step 3 1
-./pfeil -v -t "$(add_tags $?)" step3 >/dev/null && export TRACE_START=$(date)
+./pfeil -v -t "$(add_tags $?)" step3 >/dev/null
 echo ">>> or we can run a command in a subprocess and automatically capture the exit code"
-./pfeil -v step4 sleep 1 > /dev/null && export TRACE_START=$(date)
+unset TRACE_START # let pfeil start the timer
+./pfeil -v step4 sleep 1 > /dev/null
 echo ">>> even something more complicated, that also fails"
 # note the -- to prevent pfeil from trying to handle the -c flag itself
 ./pfeil -v step5 -- /bin/bash -c 'echo "doing step 5" && sleep 1 && false'
