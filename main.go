@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,7 +18,7 @@ import (
 )
 
 var (
-	version = "0.3.0"
+	version = "0.3.1"
 	verbose = flag.BoolP("verbose", "v", false, "enable verbose/debug logging (default false)")
 	sample  = flag.BoolP("sample", "y", false, "always sample new trace (sets SAMPLER_TYPE=const, SAMPLER_PARAM=1)")
 	noop    = flag.BoolP("nosample", "n", false, "never sample new trace (overrides -y, sets SAMPLER_PARAM=0)")
@@ -186,29 +185,13 @@ func runCommand(ctx context.Context, span opentracing.Span, name string, arg ...
 	span.SetTag("cmd.cmd", name)
 	span.SetTag("cmd.args", strings.Join(arg, " "))
 	cmd := exec.CommandContext(ctx, name, arg...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go io.Copy(os.Stdout, stdout)
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-	go io.Copy(os.Stderr, stderr)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return err
-	}
-	go func() {
-		// we need to manually close stdin, otherwise some commands may wait forever
-		defer stdin.Close()
-		io.Copy(stdin, os.Stdin)
-	}()
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-	if err = cmd.Wait(); err != nil {
+	if err := cmd.Wait(); err != nil {
 		switch e := err.(type) {
 		case *exec.ExitError:
 			span.SetTag("error", true)
